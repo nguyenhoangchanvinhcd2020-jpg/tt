@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Massive 3D Rotating Heart Particles</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #05020a;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer; /* Đổi con trỏ chuột thành hình bàn tay để báo hiệu có thể click */
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #instruction {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            letter-spacing: 2px;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: blink 2s infinite;
+            z-index: 10;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instruction">CLICK, TAP, OR PRESS SPACE TO DISPERSE/CONVERGE</div>
+    <canvas id="heartCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        const particles = [];
+        const particleCount = 7000; 
+        let isHeart = false; 
+
+        // Khoảng cách camera để tạo hiệu ứng phối cảnh 3D
+        const focalLength = 500;
+
+        class Particle {
+            constructor() {
+                this.x3D = (Math.random() - 0.5) * width * 2;
+                this.y3D = (Math.random() - 0.5) * height * 2;
+                this.z3D = (Math.random() - 0.5) * 1000;
+                
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = (Math.random() - 0.5) * 3;
+                this.vz = (Math.random() - 0.5) * 3;
+
+                // --- TẠO HÌNH TRÁI TIM 3D (Taubin Heart Volume) ---
+                let found = false;
+                let hx, hy, hz;
+                
+                while (!found) {
+                    hx = (Math.random() - 0.5) * 3; 
+                    hy = (Math.random() - 0.5) * 3; 
+                    hz = (Math.random() - 0.5) * 3; 
+                    
+                    let a = hx*hx + 2.25*hy*hy + hz*hz - 1;
+                    let val = a*a*a - hx*hx*hz*hz*hz - 0.1125*hy*hy*hz*hz*hz;
+                    
+                    if (val <= 0 && val >= -0.2) {
+                        found = true;
+                    }
+                }
+                
+                this.baseX = hx;
+                this.baseY = -hz; 
+                this.baseZ = hy;
+
+                this.size = Math.random() * 2.5 + 1.2; 
+                const colors = ['#ff2a5f', '#ff7b9c', '#ffffff', '#ff4d79'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                
+                this.screenX = 0;
+                this.screenY = 0;
+                this.screenScale = 1;
+                this.depth = 0; 
+            }
+
+            update(pulse, currentAngle) {
+                if (isHeart) {
+                    const baseScale = width < 600 ? 140 : 280;
+                    const scale = baseScale * pulse;
+
+                    const targetX = this.baseX * scale;
+                    const targetY = this.baseY * scale;
+                    const targetZ = this.baseZ * scale;
+
+                    this.x3D += (targetX - this.x3D) * 0.1;
+                    this.y3D += (targetY - this.y3D) * 0.1;
+                    this.z3D += (targetZ - this.z3D) * 0.1;
+                } else {
+                    this.x3D += this.vx;
+                    this.y3D += this.vy;
+                    this.z3D += this.vz;
+
+                    if (this.x3D < -width || this.x3D > width) this.vx *= -1;
+                    if (this.y3D < -height || this.y3D > height) this.vy *= -1;
+                    if (this.z3D < -1000 || this.z3D > 1000) this.vz *= -1;
+                }
+
+                // --- TOÁN HỌC XOAY 3D ---
+                let cosA = Math.cos(currentAngle);
+                let sinA = Math.sin(currentAngle);
+                let rotX = this.x3D * cosA - this.z3D * sinA;
+                let rotZ = this.x3D * sinA + this.z3D * cosA;
+                
+                let tilt = 0.3; 
+                let cosT = Math.cos(tilt);
+                let sinT = Math.sin(tilt);
+                let rotY = this.y3D * cosT - rotZ * sinT;
+                let finalZ = this.y3D * sinT + rotZ * cosT;
+
+                this.depth = finalZ;
+
+                // --- PHỐI CẢNH 3D (PERSPECTIVE) ---
+                let offsetZ = 400; 
+                this.screenScale = focalLength / (focalLength + finalZ + offsetZ);
+                
+                if(this.screenScale < 0) this.screenScale = 0.001; 
+
+                this.screenX = width / 2 + rotX * this.screenScale;
+                this.screenY = height / 2 + rotY * this.screenScale;
+            }
+
+            draw() {
+                ctx.globalAlpha = Math.min(1, Math.max(0.1, this.screenScale * 1.2));
+                
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                let drawSize = this.size * this.screenScale * 1.5;
+                ctx.arc(this.screenX, this.screenY, Math.max(0.1, drawSize), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        let time = 0; 
+        let rotationAngle = 0; 
+
+        function animate() {
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = 'rgba(5, 2, 10, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            time += 0.05; 
+            rotationAngle += 0.015; 
+            
+            let pulse = 1 + Math.pow(Math.abs(Math.sin(time)), 6) * 0.1;
+
+            particles.forEach(p => p.update(pulse, rotationAngle));
+
+            particles.sort((a, b) => b.depth - a.depth);
+
+            particles.forEach(p => p.draw());
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Xử lý phím cứng (Space, D)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'd' || e.key === 'D' || e.key === ' ') {
+                isHeart = !isHeart;
+            }
+        });
+
+        // Xử lý chạm trên màn hình điện thoại (Touch)
+        window.addEventListener('touchstart', () => {
+            isHeart = !isHeart;
+        });
+
+        // Xử lý click chuột trái trên máy tính
+        window.addEventListener('click', () => {
+            isHeart = !isHeart;
+        });
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>

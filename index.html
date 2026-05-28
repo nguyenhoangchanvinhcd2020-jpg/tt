@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Massive 3D Rotating Heart Particles</title>
+    <title>Gigantic 3D Galaxy to Heart - Hyper Speed</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #05020a;
+            background-color: #010003;
             overflow: hidden;
             font-family: 'Courier New', Courier, monospace;
-            cursor: pointer; /* Đổi con trỏ chuột thành hình bàn tay để báo hiệu có thể click */
+            cursor: pointer;
         }
 
         canvas {
@@ -30,19 +30,19 @@
             letter-spacing: 2px;
             pointer-events: none;
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-            animation: blink 2s infinite;
+            animation: blink 1s infinite;
             z-index: 10;
         }
 
         @keyframes blink {
-            0%, 100% { opacity: 0.5; }
+            0%, 100% { opacity: 0.4; }
             50% { opacity: 1; }
         }
     </style>
 </head>
 <body>
 
-    <div id="instruction">I LOVE U</div>
+    <div id="instruction">CLICK TO TRANSFORM</div>
     <canvas id="heartCanvas"></canvas>
 
     <script>
@@ -53,23 +53,34 @@
         let height = canvas.height = window.innerHeight;
 
         const particles = [];
-        const particleCount = 7000; 
+        // Tăng lên 18,000 hạt để khi phóng to thiên hà không bị thưa thớt
+        const particleCount = 18000; 
         let isHeart = false; 
 
-        // Khoảng cách camera để tạo hiệu ứng phối cảnh 3D
-        const focalLength = 500;
+        // CHỈNH SỬA: Tăng tiêu cự focalLength lên 650 giúp kéo góc nhìn camera lại gần đĩa bụi sao hơn (tạo cảm giác to lớn hơn)
+        const focalLength = 650;
 
         class Particle {
             constructor() {
-                this.x3D = (Math.random() - 0.5) * width * 2;
-                this.y3D = (Math.random() - 0.5) * height * 2;
-                this.z3D = (Math.random() - 0.5) * 1000;
+                // --- Trạng thái 1: TỌA ĐỘ DẢI NGÂN HÀ BAN ĐẦU ---
+                const arms = 2; 
+                const armIndex = Math.floor(Math.random() * arms);
+                // Mở rộng bán kính dải thiên hà (từ 3.5 lên 4.5)
+                const distance = Math.pow(Math.random(), 1.8) * 4.5; 
+                const angle = distance * 1.8 + (armIndex * (Math.PI * 2 / arms)) + (Math.random() - 0.5) * 0.35;
+                const thickness = (4.5 - distance) * 0.15; 
                 
-                this.vx = (Math.random() - 0.5) * 3;
-                this.vy = (Math.random() - 0.5) * 3;
-                this.vz = (Math.random() - 0.5) * 3;
+                // CHỈNH SỬA: Tăng tỉ lệ đĩa ngân hà ban đầu lớn hơn đáng kể
+                const galaxyScale = width < 600 ? 180 : 380;
+                this.x3D = Math.cos(angle) * distance * galaxyScale;
+                this.y3D = (Math.random() - 0.5) * thickness * galaxyScale;
+                this.z3D = Math.sin(angle) * distance * galaxyScale;
 
-                // --- TẠO HÌNH TRÁI TIM 3D (Taubin Heart Volume) ---
+                this.orbitSpeed = Math.random() * 0.015 + 0.01;
+                this.orbitRadius = Math.sqrt(this.x3D * this.x3D + this.z3D * this.z3D);
+                this.orbitAngle = Math.atan2(this.z3D, this.x3D);
+
+                // --- Trạng thái 2: TOÁN HỌC TRÁI TIM MỤC TIÊU ---
                 let found = false;
                 let hx, hy, hz;
                 
@@ -90,8 +101,11 @@
                 this.baseY = -hz; 
                 this.baseZ = hy;
 
-                this.size = Math.random() * 2.5 + 1.2; 
-                const colors = ['#ff2a5f', '#ff7b9c', '#ffffff', '#ff4d79'];
+                // Giữ hạt kích thước mịn lấp lánh
+                this.size = Math.random() * 1.4 + 0.2; 
+                
+                // Bảng màu tinh vân rực rỡ
+                const colors = ['#ff2a6d', '#ff71ce', '#05ffa1', '#00f5ff', '#ffffff', '#ffffff'];
                 this.color = colors[Math.floor(Math.random() * colors.length)];
                 
                 this.screenX = 0;
@@ -102,24 +116,25 @@
 
             update(pulse, currentAngle) {
                 if (isHeart) {
-                    const baseScale = width < 600 ? 140 : 280;
+                    // CHỈNH SỬA: Tăng kích thước phom Trái Tim khổng lồ (Từ 280 lên 420 trên máy tính)
+                    const baseScale = width < 600 ? 200 : 420;
                     const scale = baseScale * pulse;
 
                     const targetX = this.baseX * scale;
                     const targetY = this.baseY * scale;
                     const targetZ = this.baseZ * scale;
 
-                    this.x3D += (targetX - this.x3D) * 0.1;
-                    this.y3D += (targetY - this.y3D) * 0.1;
-                    this.z3D += (targetZ - this.z3D) * 0.1;
+                    this.x3D += (targetX - this.x3D) * 0.22;
+                    this.y3D += (targetY - this.y3D) * 0.22;
+                    this.z3D += (targetZ - this.z3D) * 0.22;
                 } else {
-                    this.x3D += this.vx;
-                    this.y3D += this.vy;
-                    this.z3D += this.vz;
-
-                    if (this.x3D < -width || this.x3D > width) this.vx *= -1;
-                    if (this.y3D < -height || this.y3D > height) this.vy *= -1;
-                    if (this.z3D < -1000 || this.z3D > 1000) this.vz *= -1;
+                    // TRẠNG THÁI NGÂN HÀ: Xoay quanh lõi trung tâm
+                    this.orbitAngle += this.orbitSpeed;
+                    const targetX = Math.cos(this.orbitAngle) * this.orbitRadius;
+                    const targetZ = Math.sin(this.orbitAngle) * this.orbitRadius;
+                    
+                    this.x3D += (targetX - this.x3D) * 0.1;
+                    this.z3D += (targetZ - this.z3D) * 0.1;
                 }
 
                 // --- TOÁN HỌC XOAY 3D ---
@@ -128,7 +143,7 @@
                 let rotX = this.x3D * cosA - this.z3D * sinA;
                 let rotZ = this.x3D * sinA + this.z3D * cosA;
                 
-                let tilt = 0.3; 
+                let tilt = 0.55; // Độ nghiêng đĩa sao nhìn có độ dày 3D sâu thẳm
                 let cosT = Math.cos(tilt);
                 let sinT = Math.sin(tilt);
                 let rotY = this.y3D * cosT - rotZ * sinT;
@@ -136,8 +151,8 @@
 
                 this.depth = finalZ;
 
-                // --- PHỐI CẢNH 3D (PERSPECTIVE) ---
-                let offsetZ = 400; 
+                // --- PHỐI CẢNH CHIỀU SÂU ---
+                let offsetZ = 450; 
                 this.screenScale = focalLength / (focalLength + finalZ + offsetZ);
                 
                 if(this.screenScale < 0) this.screenScale = 0.001; 
@@ -147,12 +162,11 @@
             }
 
             draw() {
-                ctx.globalAlpha = Math.min(1, Math.max(0.1, this.screenScale * 1.2));
-                
+                ctx.globalAlpha = Math.min(1, Math.max(0.1, this.screenScale * 1.1));
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                let drawSize = this.size * this.screenScale * 1.5;
-                ctx.arc(this.screenX, this.screenY, Math.max(0.1, drawSize), 0, Math.PI * 2);
+                let drawSize = this.size * this.screenScale;
+                ctx.arc(this.screenX, this.screenY, Math.max(0.05, drawSize), 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -166,13 +180,14 @@
 
         function animate() {
             ctx.globalAlpha = 1.0;
-            ctx.fillStyle = 'rgba(5, 2, 10, 0.2)';
+            ctx.fillStyle = 'rgba(2, 0, 5, 0.14)'; // Tạo vệt quét mờ mượt mà
             ctx.fillRect(0, 0, width, height);
 
-            time += 0.05; 
-            rotationAngle += 0.015; 
+            // GIỮ NGUYÊN TỐC ĐỘ SIÊU NHANH
+            time += 0.12;           
+            rotationAngle += 0.035; 
             
-            let pulse = 1 + Math.pow(Math.abs(Math.sin(time)), 6) * 0.1;
+            let pulse = 1 + Math.pow(Math.abs(Math.sin(time)), 6) * 0.07;
 
             particles.forEach(p => p.update(pulse, rotationAngle));
 
@@ -185,19 +200,17 @@
 
         animate();
 
-        // Xử lý phím cứng (Space, D)
+        // Các bộ lắng nghe tương tác chạm/click để co bóp chuyển hình
         window.addEventListener('keydown', (e) => {
             if (e.key === 'd' || e.key === 'D' || e.key === ' ') {
                 isHeart = !isHeart;
             }
         });
 
-        // Xử lý chạm trên màn hình điện thoại (Touch)
         window.addEventListener('touchstart', () => {
             isHeart = !isHeart;
         });
 
-        // Xử lý click chuột trái trên máy tính
         window.addEventListener('click', () => {
             isHeart = !isHeart;
         });
